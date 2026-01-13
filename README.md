@@ -1,5 +1,5 @@
-# <p align="center">Netflix Shows and Movies Project</p>
-# <p align="center">![Pic](https://i.ibb.co/Q81WwRN/92399716.jpg)</p>
+# <p align="center">Streaming Content Analytics Dashboard</p>
+
 
 ![WhatsApp Image 2026-01-13 at 10 01 56 AM](https://github.com/user-attachments/assets/3d870a9f-8995-4e6a-b4f7-79f5ef14421e)
 
