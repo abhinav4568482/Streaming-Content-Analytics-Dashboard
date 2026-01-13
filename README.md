@@ -1,6 +1,14 @@
 # <p align="center">Netflix Shows and Movies Project</p>
 # <p align="center">![Pic](https://i.ibb.co/Q81WwRN/92399716.jpg)</p>
 
+![WhatsApp Image 2026-01-13 at 10 01 56 AM](https://github.com/user-attachments/assets/3d870a9f-8995-4e6a-b4f7-79f5ef14421e)
+
+![WhatsApp Image 2026-01-13 at 10 02 16 AM](https://github.com/user-attachments/assets/960a072f-02f1-4a6c-abb9-9da4119afc49)
+
+![WhatsApp Image 2026-01-13 at 10 02 29 AM](https://github.com/user-attachments/assets/e82cfe2d-66d4-4b58-816a-55d63be7b681)
+
+
+
 **Tools Used:** Excel, MySQL, Tableau
 
 [Datasets Used](https://www.kaggle.com/datasets/victorsoeiro/netflix-tv-shows-and-movies?select=titles.csv)
