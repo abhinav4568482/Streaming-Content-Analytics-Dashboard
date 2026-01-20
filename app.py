@@ -721,6 +721,228 @@ with col4:
     else:
         st.info("No data available")
 
+# ==================== MAP VISUALIZATION ====================
+
+st.markdown('<div class="section-header">Global Production Distribution</div>', unsafe_allow_html=True)
+
+# Get map data
+map_data = get_production_countries_data(
+    year_range[0], year_range[1], 
+    min_imdb if min_imdb > 0 else None,
+    content_type if content_type != "All" else None
+)
+
+if not map_data.empty:
+    import json
+    import ast
+    
+    # Process country codes for choropleth
+    country_counts = {}
+    for idx, row in map_data.iterrows():
+        try:
+            countries = ast.literal_eval(row['production_countries']) if isinstance(row['production_countries'], str) else row['production_countries']
+            if isinstance(countries, list):
+                for country_code in countries:
+                    country_counts[country_code] = country_counts.get(country_code, 0) + row['count']
+        except:
+            pass
+    
+    if country_counts:
+        countries_list = list(country_counts.keys())
+        values_list = list(country_counts.values())
+        
+        fig = go.Figure(data=go.Choropleth(
+            locations=countries_list,
+            z=values_list,
+            colorscale=[[0, '#0f1116'], [0.5, '#8B0000'], [1, '#E50914']],
+            autocolorscale=False,
+            reversescale=False,
+            marker_line_color='#2a2d35',
+            colorbar=dict(
+                title="Content Count",
+                thickness=15,
+                len=0.7,
+                tickcolor='#d0d0d0'
+            ),
+            hovertemplate='<b>%{locations}</b><br>Content: %{z}<extra></extra>'
+        ))
+        
+        fig.update_layout(
+            title=None,
+            geo=dict(
+                showframe=True,
+                showcoastlines=True,
+                projection_type='natural earth',
+                bgcolor='#1a1d23',
+                framecolor='#2a2d35',
+                coastcolor='#2a2d35'
+            ),
+            plot_bgcolor='#0f1116',
+            paper_bgcolor='#0f1116',
+            font=dict(color='#d0d0d0', family='Arial, sans-serif'),
+            height=450,
+            margin=dict(l=0, r=0, t=0, b=0)
+        )
+        
+        st.plotly_chart(fig, use_container_width=True, key="map_viz")
+    else:
+        st.info("No production country data available")
+else:
+    st.info("No production country data available")
+
+# ==================== ANALYTICS CHARTS SECTION ====================
+
+st.markdown('<div class="section-header">Content Analytics</div>', unsafe_allow_html=True)
+
+# Get chart data
+decade_data = get_decade_data(year_range[0], year_range[1], min_imdb if min_imdb > 0 else None, content_type if content_type != "All" else None)
+age_cert_data = get_age_certification_data(year_range[0], year_range[1], min_imdb if min_imdb > 0 else None, content_type if content_type != "All" else None)
+top_seasons_data = get_top_seasons_shows(10, year_range[0], year_range[1], min_imdb if min_imdb > 0 else None)
+avg_scores_data = get_avg_scores_by_type(year_range[0], year_range[1], min_imdb if min_imdb > 0 else None)
+
+# Row 1: Decade & Age Certifications
+col1, col2 = st.columns(2, gap="medium")
+
+# Chart 1: Movies & Shows by Decade
+with col1:
+    st.markdown('<div class="subsection-header">Content by Decade</div>', unsafe_allow_html=True)
+    if not decade_data.empty:
+        decade_pivot = decade_data.pivot_table(values='count', index='decade', columns='type', fill_value=0)
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=decade_pivot.index,
+            y=decade_pivot.get('MOVIE', [0]*len(decade_pivot)),
+            name='Movies',
+            marker_color='#E50914',
+            hovertemplate='<b>%{x}s</b><br>Movies: %{y}<extra></extra>'
+        ))
+        fig.add_trace(go.Bar(
+            x=decade_pivot.index,
+            y=decade_pivot.get('SHOW', [0]*len(decade_pivot)),
+            name='Shows',
+            marker_color='#8B0000',
+            hovertemplate='<b>%{x}s</b><br>Shows: %{y}<extra></extra>'
+        ))
+        
+        fig.update_layout(
+            barmode='group',
+            plot_bgcolor='#0f1116',
+            paper_bgcolor='#0f1116',
+            hovermode='x unified',
+            showlegend=True,
+            legend=dict(x=0.7, y=1, bgcolor='rgba(0,0,0,0)', bordercolor='#2a2d35'),
+            xaxis=dict(title='Decade', color='#d0d0d0', tickfont=dict(color='#d0d0d0')),
+            yaxis=dict(title='Count', color='#d0d0d0', tickfont=dict(color='#d0d0d0')),
+            font=dict(color='#d0d0d0'),
+            height=350,
+            margin=dict(l=40, r=20, t=30, b=40)
+        )
+        
+        st.plotly_chart(fig, use_container_width=True, key="decade_chart")
+    else:
+        st.info("No decade data available")
+
+# Chart 2: Age Certifications Pie Chart
+with col2:
+    st.markdown('<div class="subsection-header">Age Certifications</div>', unsafe_allow_html=True)
+    if not age_cert_data.empty:
+        fig = go.Figure(data=[go.Pie(
+            labels=age_cert_data['age_certification'],
+            values=age_cert_data['count'],
+            marker=dict(
+                colors=['#E50914', '#8B0000', '#C41E3A', '#B22222', '#DC143C'],
+                line=dict(color='#0f1116', width=2)
+            ),
+            hovertemplate='<b>%{label}</b><br>Count: %{value}<extra></extra>'
+        )])
+        
+        fig.update_layout(
+            plot_bgcolor='#0f1116',
+            paper_bgcolor='#0f1116',
+            font=dict(color='#d0d0d0'),
+            height=350,
+            margin=dict(l=20, r=20, t=30, b=20),
+            showlegend=True,
+            legend=dict(x=0.7, y=0.5, bgcolor='rgba(0,0,0,0)', bordercolor='#2a2d35')
+        )
+        
+        st.plotly_chart(fig, use_container_width=True, key="age_cert_chart")
+    else:
+        st.info("No age certification data available")
+
+# Row 2: Top Shows by Seasons & Average Scores
+col1, col2 = st.columns(2, gap="medium")
+
+# Chart 3: Top Shows by Seasons
+with col1:
+    st.markdown('<div class="subsection-header">Top Shows by Seasons</div>', unsafe_allow_html=True)
+    if not top_seasons_data.empty:
+        top_seasons_sorted = top_seasons_data.sort_values('total_seasons', ascending=True).tail(10)
+        
+        fig = go.Figure(data=[go.Bar(
+            y=top_seasons_sorted['title'],
+            x=top_seasons_sorted['total_seasons'],
+            orientation='h',
+            marker=dict(color='#E50914', line=dict(color='#8B0000', width=1)),
+            hovertemplate='<b>%{y}</b><br>Seasons: %{x}<extra></extra>'
+        )])
+        
+        fig.update_layout(
+            plot_bgcolor='#0f1116',
+            paper_bgcolor='#0f1116',
+            xaxis=dict(title='Number of Seasons', color='#d0d0d0', tickfont=dict(color='#d0d0d0')),
+            yaxis=dict(title='', color='#d0d0d0', tickfont=dict(color='#d0d0d0')),
+            font=dict(color='#d0d0d0'),
+            height=350,
+            margin=dict(l=200, r=20, t=30, b=40),
+            showlegend=False
+        )
+        
+        st.plotly_chart(fig, use_container_width=True, key="seasons_chart")
+    else:
+        st.info("No seasons data available")
+
+# Chart 4: Average Scores Comparison
+with col2:
+    st.markdown('<div class="subsection-header">Average Scores by Content Type</div>', unsafe_have_html=True)
+    if not avg_scores_data.empty:
+        fig = go.Figure()
+        
+        fig.add_trace(go.Bar(
+            x=avg_scores_data['type'],
+            y=avg_scores_data['avg_imdb_score'],
+            name='IMDb Score',
+            marker_color='#E50914',
+            hovertemplate='<b>%{x}</b><br>IMDb: %{y:.2f}<extra></extra>'
+        ))
+        
+        fig.add_trace(go.Bar(
+            x=avg_scores_data['type'],
+            y=avg_scores_data['avg_tmdb_score'],
+            name='TMDB Score',
+            marker_color='#8B0000',
+            hovertemplate='<b>%{x}</b><br>TMDB: %{y:.2f}<extra></extra>'
+        ))
+        
+        fig.update_layout(
+            barmode='group',
+            plot_bgcolor='#0f1116',
+            paper_bgcolor='#0f1116',
+            xaxis=dict(title='Content Type', color='#d0d0d0', tickfont=dict(color='#d0d0d0')),
+            yaxis=dict(title='Average Score', color='#d0d0d0', tickfont=dict(color='#d0d0d0')),
+            font=dict(color='#d0d0d0'),
+            height=350,
+            margin=dict(l=40, r=20, t=30, b=40),
+            hovermode='x unified',
+            showlegend=True,
+            legend=dict(x=0.6, y=1, bgcolor='rgba(0,0,0,0)', bordercolor='#2a2d35')
+        )
+        
+        st.plotly_chart(fig, use_container_width=True, key="scores_chart")
+    else:
+        st.info("No scores data available")
+
 # ==================== DEVELOPER SECTION ====================
 
 st.markdown("<br><br>", unsafe_allow_html=True)
