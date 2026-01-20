@@ -770,12 +770,14 @@ if not map_data.empty:
         fig.update_layout(
             title=None,
             geo=dict(
-                showframe=True,
+                showframe=False,
                 showcoastlines=True,
                 projection_type='natural earth',
                 bgcolor='#1a1d23',
-                framecolor='#2a2d35',
-                coastcolor='#2a2d35'
+                coastlinecolor='#2a2d35',
+                coastlinewidth=0.5,
+                landcolor='#252830',
+                lakecolor='#1a1d23'
             ),
             plot_bgcolor='#0f1116',
             paper_bgcolor='#0f1116',
