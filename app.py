@@ -198,227 +198,288 @@ st.markdown("""
 
 # ==================== DATABASE PATH DETECTION ====================
 
-def find_database():
-    """Find the database file in common locations."""
-    possible_paths = [
-        "netflix.db",
-        os.path.join(os.path.dirname(__file__), "netflix.db"),
-    ]
+def get_database_path():
+    """
+    Get the absolute path to the Netflix database.
+    Robust for local development and Render deployment.
+    """
+    # Use absolute path based on this script's location
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    db_path = os.path.join(script_dir, "netflix.db")
     
-    for path in possible_paths:
-        if os.path.exists(path):
-            return path
-    
-    return "netflix.db"
+    return db_path
 
-DB_PATH = find_database()
+# Initialize database path and verify it exists
+DB_PATH = get_database_path()
+
+def verify_database_exists():
+    """Verify the database file exists and is readable."""
+    if not os.path.exists(DB_PATH):
+        error_msg = (
+            "Database file not found in deployment environment.\n\n"
+            f"Expected location: {DB_PATH}\n\n"
+            "Please ensure netflix.db is committed to the repository."
+        )
+        st.error(error_msg)
+        st.stop()
+    
+    if not os.access(DB_PATH, os.R_OK):
+        error_msg = (
+            "Database file is not readable.\n\n"
+            f"Path: {DB_PATH}\n\n"
+            "Check file permissions or deployment configuration."
+        )
+        st.error(error_msg)
+        st.stop()
 
 # ==================== DATABASE CONNECTION ====================
 
 @contextmanager
 def get_db_connection():
     """Create and manage SQLite database connection."""
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     try:
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10.0)
+        conn.row_factory = sqlite3.Row
         yield conn
+    except sqlite3.DatabaseError as e:
+        st.error(f"Database connection error: {str(e)}")
+        st.stop()
+    except Exception as e:
+        st.error(f"Unexpected database error: {str(e)}")
+        st.stop()
     finally:
-        conn.close()
+        try:
+            conn.close()
+        except:
+            pass
+
+# Verify database on app start
+verify_database_exists()
 
 # ==================== QUERY FUNCTIONS ====================
 
 @st.cache_data
 def get_year_range():
     """Get minimum and maximum release years from database."""
-    query = """
-    SELECT MIN(release_year) as min_year, MAX(release_year) as max_year
-    FROM titles
-    WHERE release_year IS NOT NULL
-    """
-    with get_db_connection() as conn:
-        result = pd.read_sql_query(query, conn)
-        min_year = result['min_year'].iloc[0]
-        max_year = result['max_year'].iloc[0]
-        
-        if pd.isna(min_year) or min_year is None:
-            min_year = 1900
-        if pd.isna(max_year) or max_year is None:
-            max_year = 2024
-        
-        return int(min_year), int(max_year)
+    try:
+        query = """
+        SELECT MIN(release_year) as min_year, MAX(release_year) as max_year
+        FROM titles
+        WHERE release_year IS NOT NULL
+        """
+        with get_db_connection() as conn:
+            result = pd.read_sql_query(query, conn)
+            min_year = result['min_year'].iloc[0]
+            max_year = result['max_year'].iloc[0]
+            
+            if pd.isna(min_year) or min_year is None:
+                min_year = 1900
+            if pd.isna(max_year) or max_year is None:
+                max_year = 2024
+            
+            return int(min_year), int(max_year)
+    except Exception as e:
+        st.error(f"Error fetching year range: {str(e)}")
+        return 1900, 2024
 
 @st.cache_data
 def get_top_movies(limit=10, year_min=None, year_max=None, min_imdb=None):
     """Get top movies by IMDB score."""
-    conditions = ["UPPER(type) = 'MOVIE'", "imdb_score IS NOT NULL"]
-    
-    if year_min:
-        conditions.append(f"release_year >= {year_min}")
-    if year_max:
-        conditions.append(f"release_year <= {year_max}")
-    if min_imdb and min_imdb > 0:
-        conditions.append(f"imdb_score >= {min_imdb}")
-    
-    where_clause = " AND ".join(conditions)
-    
-    query = f"""
-    SELECT title, imdb_score, release_year
-    FROM titles
-    WHERE {where_clause}
-    ORDER BY imdb_score DESC
-    LIMIT {limit}
-    """
-    with get_db_connection() as conn:
-        return pd.read_sql_query(query, conn)
+    try:
+        conditions = ["UPPER(type) = 'MOVIE'", "imdb_score IS NOT NULL"]
+        
+        if year_min:
+            conditions.append(f"release_year >= {year_min}")
+        if year_max:
+            conditions.append(f"release_year <= {year_max}")
+        if min_imdb and min_imdb > 0:
+            conditions.append(f"imdb_score >= {min_imdb}")
+        
+        where_clause = " AND ".join(conditions)
+        
+        query = f"""
+        SELECT title, imdb_score, release_year
+        FROM titles
+        WHERE {where_clause}
+        ORDER BY imdb_score DESC
+        LIMIT {limit}
+        """
+        with get_db_connection() as conn:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        st.error(f"Error fetching top movies: {str(e)}")
+        return pd.DataFrame()
 
 @st.cache_data
 def get_bottom_movies(limit=10, year_min=None, year_max=None, min_imdb=None):
     """Get bottom movies by IMDB score."""
-    conditions = ["UPPER(type) = 'MOVIE'", "imdb_score IS NOT NULL"]
-    
-    if year_min:
-        conditions.append(f"release_year >= {year_min}")
-    if year_max:
-        conditions.append(f"release_year <= {year_max}")
-    if min_imdb and min_imdb > 0:
-        conditions.append(f"imdb_score >= {min_imdb}")
-    
-    where_clause = " AND ".join(conditions)
-    
-    query = f"""
-    SELECT title, imdb_score, release_year
-    FROM titles
-    WHERE {where_clause}
-    ORDER BY imdb_score ASC
-    LIMIT {limit}
-    """
-    with get_db_connection() as conn:
-        return pd.read_sql_query(query, conn)
+    try:
+        conditions = ["UPPER(type) = 'MOVIE'", "imdb_score IS NOT NULL"]
+        
+        if year_min:
+            conditions.append(f"release_year >= {year_min}")
+        if year_max:
+            conditions.append(f"release_year <= {year_max}")
+        if min_imdb and min_imdb > 0:
+            conditions.append(f"imdb_score >= {min_imdb}")
+        
+        where_clause = " AND ".join(conditions)
+        
+        query = f"""
+        SELECT title, imdb_score, release_year
+        FROM titles
+        WHERE {where_clause}
+        ORDER BY imdb_score ASC
+        LIMIT {limit}
+        """
+        with get_db_connection() as conn:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        st.error(f"Error fetching bottom movies: {str(e)}")
+        return pd.DataFrame()
 
 @st.cache_data
 def get_top_shows(limit=10, year_min=None, year_max=None, min_imdb=None):
     """Get top shows by IMDB score."""
-    conditions = ["UPPER(type) = 'SHOW'", "imdb_score IS NOT NULL"]
-    
-    if year_min:
-        conditions.append(f"release_year >= {year_min}")
-    if year_max:
-        conditions.append(f"release_year <= {year_max}")
-    if min_imdb and min_imdb > 0:
-        conditions.append(f"imdb_score >= {min_imdb}")
-    
-    where_clause = " AND ".join(conditions)
-    
-    query = f"""
-    SELECT title, imdb_score, release_year
-    FROM titles
-    WHERE {where_clause}
-    ORDER BY imdb_score DESC
-    LIMIT {limit}
-    """
-    with get_db_connection() as conn:
-        return pd.read_sql_query(query, conn)
+    try:
+        conditions = ["UPPER(type) = 'SHOW'", "imdb_score IS NOT NULL"]
+        
+        if year_min:
+            conditions.append(f"release_year >= {year_min}")
+        if year_max:
+            conditions.append(f"release_year <= {year_max}")
+        if min_imdb and min_imdb > 0:
+            conditions.append(f"imdb_score >= {min_imdb}")
+        
+        where_clause = " AND ".join(conditions)
+        
+        query = f"""
+        SELECT title, imdb_score, release_year
+        FROM titles
+        WHERE {where_clause}
+        ORDER BY imdb_score DESC
+        LIMIT {limit}
+        """
+        with get_db_connection() as conn:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        st.error(f"Error fetching top shows: {str(e)}")
+        return pd.DataFrame()
 
 @st.cache_data
 def get_bottom_shows(limit=10, year_min=None, year_max=None, min_imdb=None):
     """Get bottom shows by IMDB score."""
-    conditions = ["UPPER(type) = 'SHOW'", "imdb_score IS NOT NULL"]
-    
-    if year_min:
-        conditions.append(f"release_year >= {year_min}")
-    if year_max:
-        conditions.append(f"release_year <= {year_max}")
-    if min_imdb and min_imdb > 0:
-        conditions.append(f"imdb_score >= {min_imdb}")
-    
-    where_clause = " AND ".join(conditions)
-    
-    query = f"""
-    SELECT title, imdb_score, release_year
-    FROM titles
-    WHERE {where_clause}
-    ORDER BY imdb_score ASC
-    LIMIT {limit}
-    """
-    with get_db_connection() as conn:
-        return pd.read_sql_query(query, conn)
+    try:
+        conditions = ["UPPER(type) = 'SHOW'", "imdb_score IS NOT NULL"]
+        
+        if year_min:
+            conditions.append(f"release_year >= {year_min}")
+        if year_max:
+            conditions.append(f"release_year <= {year_max}")
+        if min_imdb and min_imdb > 0:
+            conditions.append(f"imdb_score >= {min_imdb}")
+        
+        where_clause = " AND ".join(conditions)
+        
+        query = f"""
+        SELECT title, imdb_score, release_year
+        FROM titles
+        WHERE {where_clause}
+        ORDER BY imdb_score ASC
+        LIMIT {limit}
+        """
+        with get_db_connection() as conn:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        st.error(f"Error fetching bottom shows: {str(e)}")
+        return pd.DataFrame()
 
 @st.cache_data
 def get_production_countries_data(year_min=None, year_max=None, min_imdb=None, content_type=None):
     """Get production countries data for map visualization."""
-    conditions = []
-    
-    if content_type and content_type != "All":
-        if content_type == "Movie":
-            conditions.append("UPPER(type) = 'MOVIE'")
-        else:
-            conditions.append("UPPER(type) = 'SHOW'")
-    
-    if year_min:
-        conditions.append(f"release_year >= {year_min}")
-    if year_max:
-        conditions.append(f"release_year <= {year_max}")
-    if min_imdb and min_imdb > 0:
-        conditions.append(f"imdb_score >= {min_imdb}")
-    
-    where_clause = " AND ".join(conditions) if conditions else "1=1"
-    
-    query = f"""
-    SELECT 
-        production_countries,
-        COUNT(*) as count
-    FROM titles
-    WHERE production_countries IS NOT NULL 
-    AND production_countries != ''
-    AND production_countries != '[]'
-    AND {where_clause}
-    GROUP BY production_countries
-    ORDER BY count DESC
-    LIMIT 50
-    """
-    with get_db_connection() as conn:
-        return pd.read_sql_query(query, conn)
+    try:
+        conditions = []
+        
+        if content_type and content_type != "All":
+            if content_type == "Movie":
+                conditions.append("UPPER(type) = 'MOVIE'")
+            else:
+                conditions.append("UPPER(type) = 'SHOW'")
+        
+        if year_min:
+            conditions.append(f"release_year >= {year_min}")
+        if year_max:
+            conditions.append(f"release_year <= {year_max}")
+        if min_imdb and min_imdb > 0:
+            conditions.append(f"imdb_score >= {min_imdb}")
+        
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+        
+        query = f"""
+        SELECT 
+            production_countries,
+            COUNT(*) as count
+        FROM titles
+        WHERE production_countries IS NOT NULL 
+        AND production_countries != ''
+        AND production_countries != '[]'
+        AND {where_clause}
+        GROUP BY production_countries
+        ORDER BY count DESC
+        LIMIT 50
+        """
+        with get_db_connection() as conn:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        st.error(f"Error fetching production countries data: {str(e)}")
+        return pd.DataFrame()
 
 @st.cache_data
 def get_decade_data(year_min=None, year_max=None, min_imdb=None, content_type=None):
     """Get movies and shows count by decade."""
-    conditions = []
-    
-    if content_type and content_type != "All":
-        if content_type == "Movie":
-            conditions.append("UPPER(type) = 'MOVIE'")
-        else:
-            conditions.append("UPPER(type) = 'SHOW'")
-    
-    if year_min:
-        conditions.append(f"release_year >= {year_min}")
-    if year_max:
-        conditions.append(f"release_year <= {year_max}")
-    if min_imdb and min_imdb > 0:
-        conditions.append(f"imdb_score >= {min_imdb}")
-    
-    where_clause = " AND ".join(conditions) if conditions else "1=1"
-    
-    query = f"""
-    SELECT 
-        (FLOOR(release_year / 10) * 10) as decade,
-        type,
-        COUNT(*) as count
-    FROM titles
-    WHERE release_year IS NOT NULL
-    AND release_year >= 1940
-    AND {where_clause}
-    GROUP BY decade, type
-    ORDER BY decade
-    """
-    with get_db_connection() as conn:
-        return pd.read_sql_query(query, conn)
+    try:
+        conditions = []
+        
+        if content_type and content_type != "All":
+            if content_type == "Movie":
+                conditions.append("UPPER(type) = 'MOVIE'")
+            else:
+                conditions.append("UPPER(type) = 'SHOW'")
+        
+        if year_min:
+            conditions.append(f"release_year >= {year_min}")
+        if year_max:
+            conditions.append(f"release_year <= {year_max}")
+        if min_imdb and min_imdb > 0:
+            conditions.append(f"imdb_score >= {min_imdb}")
+        
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+        
+        query = f"""
+        SELECT 
+            (FLOOR(release_year / 10) * 10) as decade,
+            type,
+            COUNT(*) as count
+        FROM titles
+        WHERE release_year IS NOT NULL
+        AND release_year >= 1940
+        AND {where_clause}
+        GROUP BY decade, type
+        ORDER BY decade
+        """
+        with get_db_connection() as conn:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        st.error(f"Error fetching decade data: {str(e)}")
+        return pd.DataFrame()
 
 @st.cache_data
 def get_age_certification_data(year_min=None, year_max=None, min_imdb=None, content_type=None):
     """Get top age certifications."""
-    conditions = [
-        "age_certification IS NOT NULL", 
-        "age_certification != ''", 
+    try:
+        conditions = [
+            "age_certification IS NOT NULL", 
+            "age_certification != ''", 
         "age_certification != 'N/A'"
     ]
     
@@ -435,76 +496,88 @@ def get_age_certification_data(year_min=None, year_max=None, min_imdb=None, cont
     if min_imdb and min_imdb > 0:
         conditions.append(f"imdb_score >= {min_imdb}")
     
-    where_clause = " AND ".join(conditions)
+    where_clause = (" AND ".join(conditions) if conditions else "1=1")
     
-    query = f"""
-    SELECT 
-        age_certification,
-        COUNT(*) as count
-    FROM titles
-    WHERE {where_clause}
-    GROUP BY age_certification
-    ORDER BY count DESC
-    LIMIT 5
-    """
-    with get_db_connection() as conn:
-        return pd.read_sql_query(query, conn)
+    try:
+        query = f"""
+        SELECT 
+            age_certification,
+            COUNT(*) as count
+        FROM titles
+        WHERE {where_clause}
+        GROUP BY age_certification
+        ORDER BY count DESC
+        LIMIT 5
+        """
+        with get_db_connection() as conn:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        st.error(f"Error fetching age certification data: {str(e)}")
+        return pd.DataFrame()
 
 @st.cache_data
 def get_top_seasons_shows(limit=10, year_min=None, year_max=None, min_imdb=None):
     """Get top shows by number of seasons."""
-    conditions = ["UPPER(type) = 'SHOW'", "seasons IS NOT NULL"]
-    
-    if year_min:
-        conditions.append(f"release_year >= {year_min}")
-    if year_max:
-        conditions.append(f"release_year <= {year_max}")
-    if min_imdb and min_imdb > 0:
-        conditions.append(f"imdb_score >= {min_imdb}")
-    
-    where_clause = " AND ".join(conditions)
-    
-    query = f"""
-    SELECT 
-        title,
-        SUM(seasons) as total_seasons,
-        release_year
-    FROM titles
-    WHERE {where_clause}
-    GROUP BY title
-    ORDER BY total_seasons DESC
-    LIMIT {limit}
-    """
-    with get_db_connection() as conn:
-        return pd.read_sql_query(query, conn)
+    try:
+        conditions = ["UPPER(type) = 'SHOW'", "seasons IS NOT NULL"]
+        
+        if year_min:
+            conditions.append(f"release_year >= {year_min}")
+        if year_max:
+            conditions.append(f"release_year <= {year_max}")
+        if min_imdb and min_imdb > 0:
+            conditions.append(f"imdb_score >= {min_imdb}")
+        
+        where_clause = " AND ".join(conditions)
+        
+        query = f"""
+        SELECT 
+            title,
+            SUM(seasons) as total_seasons,
+            release_year
+        FROM titles
+        WHERE {where_clause}
+        GROUP BY title
+        ORDER BY total_seasons DESC
+        LIMIT {limit}
+        """
+        with get_db_connection() as conn:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        st.error(f"Error fetching top seasons shows: {str(e)}")
+        return pd.DataFrame()
 
 @st.cache_data
 def get_avg_scores_by_type(year_min=None, year_max=None, min_imdb=None):
     """Get average IMDB and TMDB scores by content type."""
-    conditions = []
-    
-    if year_min:
-        conditions.append(f"release_year >= {year_min}")
-    if year_max:
-        conditions.append(f"release_year <= {year_max}")
-    if min_imdb and min_imdb > 0:
-        conditions.append(f"imdb_score >= {min_imdb}")
-    
-    where_clause = " AND ".join(conditions) if conditions else "1=1"
-    
-    query = f"""
-    SELECT 
-        type,
-        ROUND(AVG(imdb_score), 2) as avg_imdb_score,
-        ROUND(AVG(tmdb_score), 2) as avg_tmdb_score
-    FROM titles
-    WHERE imdb_score IS NOT NULL
-    AND tmdb_score IS NOT NULL
-    AND {where_clause}
-    GROUP BY type
-    """
-    with get_db_connection() as conn:
-        return pd.read_sql_query(query, conn)
+    try:
+        conditions = []
+        
+        if year_min:
+            conditions.append(f"release_year >= {year_min}")
+        if year_max:
+            conditions.append(f"release_year <= {year_max}")
+        if min_imdb and min_imdb > 0:
+            conditions.append(f"imdb_score >= {min_imdb}")
+        
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+        
+        query = f"""
+        SELECT 
+            type,
+            ROUND(AVG(imdb_score), 2) as avg_imdb_score,
+            ROUND(AVG(tmdb_score), 2) as avg_tmdb_score
+        FROM titles
+        WHERE imdb_score IS NOT NULL
+        AND tmdb_score IS NOT NULL
+        AND {where_clause}
+        GROUP BY type
+        """
+        with get_db_connection() as conn:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        st.error(f"Error fetching average scores: {str(e)}")
+        return pd.DataFrame()
 
 # ==================== HELPER FUNCTIONS ====================
 
