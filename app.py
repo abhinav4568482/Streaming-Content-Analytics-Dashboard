@@ -907,7 +907,7 @@ with col1:
 
 # Chart 4: Average Scores Comparison
 with col2:
-    st.markdown('<div class="subsection-header">Average Scores by Content Type</div>', unsafe_have_html=True)
+    st.markdown('<div class="subsection-header">Average Scores by Content Type</div>', unsafe_allow_html=True)
     if not avg_scores_data.empty:
         fig = go.Figure()
         
