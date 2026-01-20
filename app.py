@@ -480,25 +480,24 @@ def get_age_certification_data(year_min=None, year_max=None, min_imdb=None, cont
         conditions = [
             "age_certification IS NOT NULL", 
             "age_certification != ''", 
-        "age_certification != 'N/A'"
-    ]
-    
-    if content_type and content_type != "All":
-        if content_type == "Movie":
-            conditions.append("UPPER(type) = 'MOVIE'")
-        else:
-            conditions.append("UPPER(type) = 'SHOW'")
-    
-    if year_min:
-        conditions.append(f"release_year >= {year_min}")
-    if year_max:
-        conditions.append(f"release_year <= {year_max}")
-    if min_imdb and min_imdb > 0:
-        conditions.append(f"imdb_score >= {min_imdb}")
-    
-    where_clause = (" AND ".join(conditions) if conditions else "1=1")
-    
-    try:
+            "age_certification != 'N/A'"
+        ]
+        
+        if content_type and content_type != "All":
+            if content_type == "Movie":
+                conditions.append("UPPER(type) = 'MOVIE'")
+            else:
+                conditions.append("UPPER(type) = 'SHOW'")
+        
+        if year_min:
+            conditions.append(f"release_year >= {year_min}")
+        if year_max:
+            conditions.append(f"release_year <= {year_max}")
+        if min_imdb and min_imdb > 0:
+            conditions.append(f"imdb_score >= {min_imdb}")
+        
+        where_clause = " AND ".join(conditions)
+        
         query = f"""
         SELECT 
             age_certification,
