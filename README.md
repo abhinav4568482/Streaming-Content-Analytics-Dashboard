@@ -1,25 +1,31 @@
-# <p align="center">Streaming Content Analytics Dashboard</p>
+# Streaming Content Analytics Dashboard
 
+An interactive Streamlit application for analyzing Netflix shows and movies data using SQLite with a professional dark-themed interface.
 
-![WhatsApp Image 2026-01-13 at 10 01 56 AM](https://github.com/user-attachments/assets/3d870a9f-8995-4e6a-b4f7-79f5ef14421e)
+## 🚀 Quick Deploy on Render
 
-![WhatsApp Image 2026-01-13 at 10 02 16 AM](https://github.com/user-attachments/assets/960a072f-02f1-4a6c-abb9-9da4119afc49)
+### One-Click Setup
 
-![WhatsApp Image 2026-01-13 at 10 02 29 AM](https://github.com/user-attachments/assets/e82cfe2d-66d4-4b58-816a-55d63be7b681)
+1. Click this button to deploy directly:  
+   [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/abhinav4568482/Streaming-Content-Analytics-Dashboard)
 
+### Or Manual Setup
 
+1. Go to [render.com](https://render.com) and sign up
+2. Click **"New +" → "Web Service"**
+3. Connect your GitHub repository
+4. Configure:
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
+5. Click **"Create"** - done in 2-3 minutes!
 
-**Tools Used:** Excel, MySQL, Tableau
+## 📊 Features
 
-[Datasets Used](https://www.kaggle.com/datasets/victorsoeiro/netflix-tv-shows-and-movies?select=titles.csv)
-
-[SQL Analysis (Code)](https://github.com/SharifAthar/Netflix-Shows-and-Movies-SQL/blob/main/Netflix_SQL_Analysis.sql)
-
-[Netflix Dashboard - Tableau](https://public.tableau.com/app/profile/sharif.athar/viz/NetflixShowsMoviesDashboard/Dashboard1)
-
-- **Business Problem:** Netflix wants to gather useful insights on their shows and movies for their subscribers through their datasets. The issue is, they are working with too much data (approximately 82k rows of data combined) and are unsure how to effectively analyze and extract meaningful insights from it. They need a robust and scalable data analytics solution to handle the vast amount of data and uncover valuable patterns and trends.
-
-- **How I Plan On Solving the Problem:** In helping Netflix gather valuable insights from their extensive movies and shows dataset, I will be utilizing SQL and a data visualization tool like Tableau to extract relevant information, and conduct insightful analyses. By leveraging SQL's functions, I can uncover key metrics such as viewer ratings, popularity trends, genre preferences, and viewership patterns. Once the data has been extracted and prepared, I will leverage Tableau to present the findings. This will allow for interactive exploration of the data, enabling stakeholders at Netflix to gain actionable insights through visually appealing charts, graphs, and interactive visualizations. I plan on creating a dynamic dashboard in Tableau that enables users to delve into specific movie genres, viewer demographics, or geographical regions.
+- **Content Rankings** - Top and bottom 10 movies/shows by IMDb score
+- **Global Analytics** - Production country map visualization
+- **Trend Analysis** - Content distribution by decade and ratings
+- **Advanced Filters** - Filter by type, year range, and minimum score
+- **Dark Netflix Theme** - Professional interface matching Netflix branding
 
 ## Questions I Wanted To Answer From the Dataset:
 
